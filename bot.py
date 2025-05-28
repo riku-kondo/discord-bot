@@ -396,6 +396,47 @@ async def increase_dealer_balance(interaction: discord.Interaction, 金額: int)
         ephemeral=True)
 
 
+import os
+import shutil
+from datetime import datetime, timedelta
+from discord.ext import tasks
+
+# バックアップ先フォルダ（なければ作る）
+BACKUP_FOLDER = "./backup_money"
+os.makedirs(BACKUP_FOLDER, exist_ok=True)
+
+@tasks.loop(hours=24)
+async def 自動バックアップ():
+    try:
+        # money.jsonのバックアップファイル名（日時付き）
+        now_str = datetime.now().strftime("%Y%m%d")
+        backup_filename = f"money_backup_{now_str}.json"
+        backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
+
+        # money.jsonをバックアップフォルダにコピー
+        shutil.copy("money.json", backup_path)
+        print(f"✅ money.jsonをバックアップしました: {backup_path}")
+
+        # 7日より古いバックアップを削除
+        threshold = datetime.now() - timedelta(days=7)
+        for fname in os.listdir(BACKUP_FOLDER):
+            if fname.startswith("money_backup_") and fname.endswith(".json"):
+                fpath = os.path.join(BACKUP_FOLDER, fname)
+                file_time = datetime.fromtimestamp(os.path.getmtime(fpath))
+                if file_time < threshold:
+                    os.remove(fpath)
+                    print(f"🗑 古いバックアップを削除しました: {fname}")
+
+    except Exception as e:
+        print(f"❌ 自動バックアップでエラー発生: {e}")
+
+@bot.event
+async def on_ready():
+    # 他のループ起動があるならそこに追加してください
+    自動バックアップ.start()
+    print("Botが起動し、自動バックアップを開始しました。")
+
+
 # --- Botトークンで起動 ---
 keep_alive()
 
