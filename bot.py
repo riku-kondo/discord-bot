@@ -459,6 +459,15 @@ async def on_ready():
 
 
 # --- Botトークンで起動 ---
-keep_alive()
+import os
+import discord
+from discord.ext import commands
 
-bot.run(os.getenv("DISCORD_TOKEN"))  # トークンを自分のものに置き換えてください
+bot = commands.Bot(command_prefix="!")
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+
+bot.run(os.getenv("DISCORD_TOKEN"))  # ← このままでOK（Renderで環境変数DISCORD_TOKENを登録するので）
+
