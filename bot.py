@@ -1,3 +1,4 @@
+print("bot.pyが読み込まれました")
 import os
 from dotenv import load_dotenv
 
@@ -188,11 +189,13 @@ async def payment(interaction: discord.Interaction,
 
 # --- 管理者: lactip贈与 ---
 
+
 @app_commands.default_permissions(administrator=True)
 @bot.tree.command(name="lact贈与",
                   description="Dealerからユーザーにlacttipを贈与します（管理者限定）")
 @app_commands.describe(target="贈与先を指定します", amount="贈与するlacttip量")
-async def add_money(interaction: discord.Interaction, target: discord.User, amount: int):
+async def add_money(interaction: discord.Interaction, target: discord.User,
+                    amount: int):
     await interaction.response.defer()
 
     if amount <= 0:
@@ -214,8 +217,7 @@ async def add_money(interaction: discord.Interaction, target: discord.User, amou
 
     await interaction.followup.send(
         f"{target.mention} に {amount} lacttip を贈与しました。\n"
-        f"Dealerの残高: {money[dealer_id]} lacttip"
-    )
+        f"Dealerの残高: {money[dealer_id]} lacttip")
 
 
 # --- 管理者: lactip徴収 ---
@@ -338,7 +340,6 @@ async def 月初め給料支払い():
         print("❌ 給料ログチャンネルが見つかりません。")
 
 
-
 # --- 新規参加者に初期付与 ---
 @bot.event
 async def on_member_join(member: discord.Member):
@@ -407,6 +408,7 @@ from discord.ext import tasks
 BACKUP_FOLDER = "./backup_money"
 os.makedirs(BACKUP_FOLDER, exist_ok=True)
 
+
 @tasks.loop(hours=24)
 async def 自動バックアップ():
     try:
@@ -431,6 +433,7 @@ async def 自動バックアップ():
 
     except Exception as e:
         print(f"❌ 自動バックアップでエラー発生: {e}")
+
 
 @bot.event
 async def on_ready():
@@ -457,17 +460,24 @@ async def on_ready():
     print("月初め給料支払い & 自動バックアップ 起動完了")
 
 
-
 # --- Botトークンで起動 ---
 import os
 import discord
 from discord.ext import commands
 
-bot = commands.Bot(command_prefix="!")
+import discord
+from discord.ext import commands
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-bot.run(os.getenv("DISCORD_TOKEN"))  # ← このままでOK（Renderで環境変数DISCORD_TOKENを登録するので）
 
+bot.run(
+    os.getenv("DISCORD_TOKEN"))  # ← このままでOK（Renderで環境変数DISCORD_TOKENを登録するので）
