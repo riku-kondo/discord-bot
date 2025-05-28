@@ -282,7 +282,7 @@ async def 月初め給料支払い():
         return
 
     dealer_id = bot.user.id
-    salary_log_channel_id = 1376374892055887883  # 給料ログを送るチャンネルIDに置き換えてください
+    salary_log_channel_id = 1376374892055887883
     channel = bot.get_channel(salary_log_channel_id)
 
     支払い成功者数 = 0
@@ -308,9 +308,8 @@ async def 月初め給料支払い():
 
             money[dealer_id] = dealer_balance - total_amount
             money[member.id] = money.get(member.id, 0) + total_amount
-            save_money()
+            # save_money() ← 削除！
 
-            # DM通知（省略したければここをコメントアウト可）
             try:
                 details = [
                     f"{role.name}: {給料テーブル[role.name]}"
@@ -325,7 +324,9 @@ async def 月初め給料支払い():
 
             支払い成功者数 += 1
 
-    # 支払い結果をチャンネルに送信
+    # ✅ ループの外で一括保存
+    save_money()
+
     if channel:
         await channel.send(f"今月の給料支払いが完了しました。\n"
                            f"支払い成功者数: {支払い成功者数}\n"
@@ -333,6 +334,7 @@ async def 月初め給料支払い():
                            f"Dealer残高: {money[dealer_id]} lacttip")
     else:
         print("❌ 給料ログチャンネルが見つかりません。")
+
 
 
 # --- 新規参加者に初期付与 ---
