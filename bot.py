@@ -187,33 +187,35 @@ async def payment(interaction: discord.Interaction,
 
 
 # --- 管理者: lactip贈与 ---
+
 @app_commands.default_permissions(administrator=True)
 @bot.tree.command(name="lact贈与",
-                  description="Dealerからユーザーにlactipを贈与します（管理者限定）")
-@app_commands.describe(対象="贈与先を指定します", 金額="贈与するlacttip量")
-async def add_money(interaction: discord.Interaction, 対象: discord.User,
-                    金額: int):
+                  description="Dealerからユーザーにlacttipを贈与します（管理者限定）")
+@app_commands.describe(target="贈与先を指定します", amount="贈与するlacttip量")
+async def add_money(interaction: discord.Interaction, target: discord.User, amount: int):
     await interaction.response.defer()
 
-    if 金額 <= 0:
+    if amount <= 0:
         await interaction.followup.send("贈与するtipは1以上にしてください。", ephemeral=True)
         return
 
     dealer_id = bot.user.id
-    dealer_balance = money.get(dealer_id, 0)
+    money.setdefault(dealer_id, 0)
+    dealer_balance = money[dealer_id]
 
-    if dealer_balance < 金額:
+    if dealer_balance < amount:
         await interaction.followup.send("Dealerの残高が不足しています。", ephemeral=True)
         return
 
-    money[dealer_id] = dealer_balance - 金額
-    money[対象.id] = money.get(対象.id, 0) + 金額
-    save_money()
+    money[dealer_id] -= amount
+    money[target.id] = money.get(target.id, 0) + amount
 
-    dealer_balance_after = money[dealer_id]
+    save_money()  # 非同期なら await を忘れずに
+
     await interaction.followup.send(
-        f"{対象.mention} に {金額} lacttip を贈与しました。\n"
-        f"Dealerの残高: {dealer_balance_after} lacttip")
+        f"{target.mention} に {amount} lacttip を贈与しました。\n"
+        f"Dealerの残高: {money[dealer_id]} lacttip"
+    )
 
 
 # --- 管理者: lactip徴収 ---
