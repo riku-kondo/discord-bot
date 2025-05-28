@@ -434,9 +434,28 @@ async def 自動バックアップ():
 
 @bot.event
 async def on_ready():
-    # 他のループ起動があるならそこに追加してください
-    自動バックアップ.start()
-    print("Botが起動し、自動バックアップを開始しました。")
+    load_money()
+    await bot.change_presence(activity=discord.Game(name="通貨bot起動中"))
+
+    # スラッシュコマンド同期
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ スラッシュコマンド {len(synced)} 件同期しました")
+    except Exception as e:
+        print(f"同期エラー: {e}")
+
+    print(f"✅ Botログイン: {bot.user}")
+
+    # 月初め給料支払いのループ開始（重複防止チェック付き）
+    if not 月初め給料支払い.is_running():
+        月初め給料支払い.start()
+
+    # 自動バックアップのループ開始（重複防止チェック付き）
+    if not 自動バックアップ.is_running():
+        自動バックアップ.start()
+
+    print("月初め給料支払い & 自動バックアップ 起動完了")
+
 
 
 # --- Botトークンで起動 ---
