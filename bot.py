@@ -212,7 +212,7 @@ async def add_money(interaction: discord.Interaction, 対象: discord.User,
 
     dealer_balance_after = money[dealer_id]
     await interaction.followup.send(
-        f"{対象.display_name} に {金額} lacttip を贈与しました。\n"
+        f"{対象.mention} に {金額} lacttip を贈与しました。\n"
         f"Dealerの残高: {dealer_balance_after} lacttip")
 
 
@@ -244,7 +244,7 @@ async def remove_money(interaction: discord.Interaction, 対象: discord.User,
 
     dealer_balance_after = money[dealer_id]
     await interaction.followup.send(
-        f"{対象.display_name} から {actual_deduction} lactipを徴収しました。\n"
+        f"{対象.mention} から {actual_deduction} lactipを徴収しました。\n"
         f"Dealerの残高: {dealer_balance_after} lacttip")
 
 
