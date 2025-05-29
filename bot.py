@@ -404,7 +404,7 @@ import shutil
 from datetime import datetime, timedelta
 from discord.ext import tasks
 
-# バックアップ先フォルダ（なければ作る）
+# バックアップ先フォルダ
 BACKUP_FOLDER = "./backup_money"
 os.makedirs(BACKUP_FOLDER, exist_ok=True)
 
@@ -465,8 +465,6 @@ import os
 import discord
 from discord.ext import commands
 
-import discord
-from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.message_content = True
