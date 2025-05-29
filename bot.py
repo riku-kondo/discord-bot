@@ -1,15 +1,15 @@
-print("bot.pyが読み込まれました")    
+print("bot.pyが読み込まれました")
+
 import os
 from dotenv import load_dotenv
+load_dotenv()
 
-    load_dotenv()
 from keep_alive import keep_alive
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 from datetime import datetime, timedelta
 import json
-import os
 
 # --- インテント設定 ---
 intents = discord.Intents.default()
@@ -478,6 +478,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
+if __name__== "__main__":
+    keep_alive()
 
-bot.run(
-    os.getenv("DISCORD_TOKEN"))  # ← このままでOK（Renderで環境変数DISCORD_TOKENを登録するので）
+bot.run(os.getenv("DISCORD_TOKEN"))  # ← このままでOK（Renderで環境変数DISCORD_TOKENを登録するので）
