@@ -1,8 +1,8 @@
-print("bot.pyが読み込まれました")
+print("bot.pyが読み込まれました")    
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+    load_dotenv()
 from keep_alive import keep_alive
 import discord
 from discord.ext import commands, tasks
