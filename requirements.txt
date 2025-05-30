@@ -1,4 +1,5 @@
 discord.py
 flask
 requests
+discord.py>=2.3.2
 python-dotenv
