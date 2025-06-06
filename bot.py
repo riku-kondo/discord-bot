@@ -260,6 +260,71 @@ async def payment(interaction: discord.Interaction,
         print("❌ 通知チャンネルが見つかりません。")
 
 
+#lact全体贈与
+
+
+@app_commands.default_permissions(administrator=True)
+@bot.tree.command(name="lact全体贈与",
+                  description="プレイヤーとマスター全体にlacttipを贈与します（ワンペア除外・管理者限定）")
+@app_commands.guilds(
+    discord.Object(id=1351599305932275832))  # ← あなたのギルドIDに合わせています
+@app_commands.describe(amount="贈与するlacttip量（1人あたり）")
+async def mass_tip(interaction: discord.Interaction, amount: int):
+    await interaction.response.defer(ephemeral=True)
+
+    if amount <= 0:
+        await interaction.followup.send("贈与するtipは1以上にしてください。")
+        return
+
+    guild = interaction.guild
+    if not guild:
+        await interaction.followup.send("このコマンドはサーバー内でのみ使用できます。")
+        return
+
+    # ロール取得
+    role_player = discord.utils.get(guild.roles, name="プレイヤー")
+    role_master = discord.utils.get(guild.roles, name="マスター")
+    role_exclude = discord.utils.get(guild.roles, name="ワンペア")
+
+    # 対象ユーザーを抽出
+    targets = [
+        member for member in guild.members if not member.bot and (
+            role_player in member.roles or role_master in member.roles) and (
+                role_exclude not in member.roles)
+    ]
+
+    if not targets:
+        await interaction.followup.send("贈与対象のユーザーが見つかりませんでした。")
+        return
+
+    dealer_id = bot.user.id
+    money.setdefault(dealer_id, 0)
+    dealer_balance = money[dealer_id]
+
+    total_required = amount * len(targets)
+    if dealer_balance < total_required:
+        await interaction.followup.send(
+            f"Dealerの残高が不足しています。\n必要: {total_required} / 保有: {dealer_balance}",
+            ephemeral=True)
+        return
+
+    # 贈与処理
+    for member in targets:
+        money[member.id] = money.get(member.id, 0) + amount
+        save_user_balance_to_firestore(member.id, money[member.id])
+
+    # Dealerの残高更新
+    money[dealer_id] -= total_required
+    save_user_balance_to_firestore(dealer_id, money[dealer_id])
+
+    save_money()  # 保存（非同期であれば await）
+
+    # 結果通知
+    await interaction.followup.send(
+        f"{len(targets)}人にそれぞれ {amount:,} lacttip を贈与しました。\n"
+        f"Dealerの残高: {money[dealer_id]:,} lacttip")
+
+
 # --- 管理者: lactip贈与 ---
 
 
