@@ -260,6 +260,101 @@ async def payment(interaction: discord.Interaction,
         print("❌ 通知チャンネルが見つかりません。")
 
 
+# --- 定数設定 ---
+CHALLENGE_ROLE_NAME = "挑戦者"
+CHALLENGE_CHANNEL_ID = 1373865991200833536  # ← #ゼネラル部屋のチャンネルIDに置き換えてください
+CHALLENGE_COSTS = {"挑戦": 50000, "再挑戦": 10000}
+
+挑戦モード = [
+    app_commands.Choice(name="挑戦", value="挑戦"),
+    app_commands.Choice(name="再挑戦", value="再挑戦")
+]
+
+
+# --- 通貨挑戦状コマンド ---
+@bot.tree.command(name="通貨挑戦状", description="挑戦状を送ります")
+@app_commands.guilds(discord.Object(id=1351599305932275832))  # ← サーバーID
+@app_commands.describe(対象ユーザー="挑戦相手", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
+@app_commands.choices(モード=挑戦モード)
+async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discord.Member,
+              モード: app_commands.Choice[str], 種目: str):
+    await interaction.response.defer(ephemeral=True)
+    実行者 = interaction.user
+    user_id = 実行者.id
+    mode_value = モード.value
+    now = datetime.now()
+
+    # --- モードと残高チェック ---
+    cost = CHALLENGE_COSTS.get(mode_value)
+    if money.get(user_id, 0) < cost:
+        await interaction.followup.send(f"残高が不足しています（必要：{cost}）",
+                                        ephemeral=True)
+        return
+
+    # --- ロール取得または作成 ---
+    guild = interaction.guild
+    role = discord.utils.get(guild.roles, name=CHALLENGE_ROLE_NAME)
+    if not role:
+        role = await guild.create_role(name=CHALLENGE_ROLE_NAME)
+
+    # --- 再挑戦 → 挑戦者ロールがないなら拒否 ---
+    if mode_value == "再挑戦" and role not in 実行者.roles:
+        await interaction.followup.send("再挑戦には「挑戦者」が必要です。", ephemeral=True)
+        return
+
+    # --- 支払い処理 ---
+    dealer_id = bot.user.id
+    money[user_id] -= cost
+    money[dealer_id] = money.get(dealer_id, 0) + cost
+    save_user_balance_to_firestore(user_id, money[user_id])
+    save_user_balance_to_firestore(dealer_id, money[dealer_id])
+    save_money()
+
+    # --- 挑戦者ロール付与 ---
+    if role not in 実行者.roles:
+        await 実行者.add_roles(role)
+
+    # --- 支払いチャンネルにEmbed通知 ---
+    embed_all = discord.Embed(description=(f"{対象ユーザー.mention} に挑戦状を送りました！\n"
+                                           f"**種目**: {種目}"),
+                              color=discord.Color.red(),
+                              timestamp=now)
+    await interaction.channel.send(embed=embed_all)
+
+    # --- ゼネラル部屋にEmbed通知（2行構成） ---
+    embed_general = discord.Embed(
+        description=(f"{実行者.display_name} から挑戦状が届きました！\n"
+                     f"種目：{種目}"),
+        color=discord.Color.red(),
+        timestamp=now)
+    general_channel = bot.get_channel(CHALLENGE_CHANNEL_ID)
+    if general_channel:
+        await general_channel.send(embed=embed_general)
+
+    # --- 実行者にだけ通知 ---
+    await interaction.followup.send("支払い成功", ephemeral=True)
+
+
+# --- 月末に「挑戦者」ロールを全員から削除するタスク ---
+@tasks.loop(hours=24)
+async def remove_challenger_roles():
+    now = datetime.now()
+    if now.day != 1:
+        return  # 毎月1日のみ実行
+
+    for guild in bot.guilds:
+        role = discord.utils.get(guild.roles, name=CHALLENGE_ROLE_NAME)
+        if not role:
+            continue
+
+        for member in role.members:
+            try:
+                await member.remove_roles(role)
+                print(f" {member.display_name} から挑戦者ロールを削除しました")
+            except Exception as e:
+                print(f"❌ ロール削除失敗: {member.display_name} - {e}")
+
+
 #lact全体贈与
 
 
@@ -399,24 +494,6 @@ async def remove_money(interaction: discord.Interaction, 対象: discord.User,
     await interaction.followup.send(
         f"{対象.mention} から {actual_deduction} lactipを徴収しました。\n"
         f"Dealerの残高: {dealer_balance_after} lacttip")
-
-
-# --- 管理者: Dealerの所持金を設定 ---
-@app_commands.default_permissions(administrator=True)
-@bot.tree.command(name="lact設定", description="Dealerの所持金を設定します（管理者限定）")
-@app_commands.guilds(discord.Object(id=1351599305932275832))
-@app_commands.describe(金額="設定したいlacttip（整数）")
-async def set_bot_money(interaction: discord.Interaction, 金額: int):
-    if 金額 < 0:
-        await interaction.response.send_message("tipは0以上を指定してください。",
-                                                ephemeral=True)
-        return
-
-    money[bot.user.id] = 金額
-
-    save_money()
-    await interaction.response.send_message(
-        f"Dealerの所持金を {金額} lacttip に設定しました。", ephemeral=True)
 
 
 # --- 管理者: 手動で保存 ---
