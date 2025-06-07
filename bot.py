@@ -100,14 +100,13 @@ def save_all_money_to_firestore():
     "規制官の卵": 30000,
     "案内官": 65000,
     "ベル": 30000,
-    "ベルの卵": 20000
 }
 
 
 @bot.event
 async def on_ready():
     load_money()
-    await bot.change_presence(activity=discord.Game(name="テーブルをセット"))
+    await bot.change_presence(activity=discord.Game(name="テーブルセット"))
 
     load_money_from_firestore_sync()  # ←これを追加
     print("Firestoreから残高をロードしました")
@@ -274,7 +273,7 @@ CHALLENGE_COSTS = {"挑戦": 50000, "再挑戦": 10000}
 # --- 通貨挑戦状コマンド ---
 @bot.tree.command(name="通貨挑戦状", description="挑戦状を送ります")
 @app_commands.guilds(discord.Object(id=1351599305932275832))  # ← サーバーID
-@app_commands.describe(対象ユーザー="挑戦相手", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
+@app_commands.describe(挑戦相手="挑戦相手を指定します", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
 @app_commands.choices(モード=挑戦モード)
 async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discord.Member,
               モード: app_commands.Choice[str], 種目: str):
@@ -315,10 +314,11 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
         await 実行者.add_roles(role)
 
     # --- 支払いチャンネルにEmbed通知 ---
-    embed_all = discord.Embed(description=(f"✉️ ⊰{対象ユーザー.mention} に挑戦状を送りました⊱\n"
-                                           f"**種目**: {種目}"),
-                              color=discord.Color.red(),
-                              timestamp=now)
+    embed_all = discord.Embed(
+        description=(f"✉️ ⊰{対象ユーザー.mention} に挑戦状を送りました⊱\n"
+                     f"**種目**: {種目}"),
+        color=discord.Color.red(),
+        timestamp=now)
     await interaction.channel.send(embed=embed_all)
 
     # --- ゼネラル部屋にEmbed通知（2行構成） ---
@@ -360,7 +360,7 @@ async def remove_challenger_roles():
 
 @app_commands.default_permissions(administrator=True)
 @bot.tree.command(name="lact全体贈与",
-                  description="プレイヤーとマスター全体にlacttipを贈与します（ワンペア除外・管理者限定）")
+                  description="全体にlacttipを贈与します（ワンペア除外・管理者限定）")
 @app_commands.guilds(
     discord.Object(id=1351599305932275832))  # ← あなたのギルドIDに合わせています
 @app_commands.describe(amount="贈与するlacttip量（1人あたり）")
@@ -543,8 +543,11 @@ async def 月初め給料支払い():
                 continue
 
             total_amount = 0
+
+            除外ロール = ["ワンペア"]  # 今後増える可能性もあるならリストにしておく
+
             for role in member.roles:
-                if role.name in 給料テーブル:
+                if role.name in 給料テーブル and role.name not in 除外ロール:
                     total_amount += 給料テーブル[role.name]
 
             if total_amount == 0:
