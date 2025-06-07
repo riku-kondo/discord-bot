@@ -315,7 +315,7 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
         await 実行者.add_roles(role)
 
     # --- 支払いチャンネルにEmbed通知 ---
-    embed_all = discord.Embed(description=(f"{対象ユーザー.mention} に挑戦状を送りました！\n"
+    embed_all = discord.Embed(description=(f"✉️ ⊰{対象ユーザー.mention} に挑戦状を送りました⊱\n"
                                            f"**種目**: {種目}"),
                               color=discord.Color.red(),
                               timestamp=now)
@@ -323,7 +323,7 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
 
     # --- ゼネラル部屋にEmbed通知（2行構成） ---
     embed_general = discord.Embed(
-        description=(f"{実行者.display_name} から挑戦状が届きました！\n"
+        description=(f"✉️ ⊰{実行者.display_name} から挑戦状が届きました⊱\n"
                      f"種目：{種目}"),
         color=discord.Color.red(),
         timestamp=now)
