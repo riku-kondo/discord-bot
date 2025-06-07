@@ -273,7 +273,7 @@ CHALLENGE_COSTS = {"挑戦": 50000, "再挑戦": 10000}
 # --- 通貨挑戦状コマンド ---
 @bot.tree.command(name="通貨挑戦状", description="挑戦状を送ります")
 @app_commands.guilds(discord.Object(id=1351599305932275832))  # ← サーバーID
-@app_commands.describe(挑戦相手="挑戦相手を指定します", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
+@app_commands.describe(対象ユーザー="挑戦相手を指定します", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
 @app_commands.choices(モード=挑戦モード)
 async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discord.Member,
               モード: app_commands.Choice[str], 種目: str):
