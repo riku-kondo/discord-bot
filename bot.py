@@ -27,6 +27,12 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 
+from datetime import datetime, timedelta
+
+# --- キャッシュ変数 ---
+general_member_cache = []
+cache_expire_time = datetime.min
+
 load_dotenv()
 
 # --- インテント設定 ---
@@ -261,7 +267,8 @@ async def payment(interaction: discord.Interaction,
 
 # --- 定数設定 ---
 CHALLENGE_ROLE_NAME = "挑戦者"
-CHALLENGE_CHANNEL_ID = 1373865991200833536  # ← #ゼネラル部屋のチャンネルIDに置き換えてください
+GENERAL_ROLE_NAME = "General"  # ← 一般参加者のロール名に合わせてください
+CHALLENGE_CHANNEL_ID = 1373865991200833536  # ← #ゼネラル部屋のチャンネルID
 CHALLENGE_COSTS = {"挑戦": 50000, "再挑戦": 10000}
 
 挑戦モード = [
@@ -270,12 +277,12 @@ CHALLENGE_COSTS = {"挑戦": 50000, "再挑戦": 10000}
 ]
 
 
-# --- 通貨挑戦状コマンド ---
+# --- 通貨挑戦状コマンド本体 ---
 @bot.tree.command(name="通貨挑戦状", description="挑戦状を送ります")
-@app_commands.guilds(discord.Object(id=1351599305932275832))  # ← サーバーID
+@app_commands.guilds(discord.Object(id=1351599305932275832))  # サーバーIDに置き換えてください
 @app_commands.describe(対象ユーザー="挑戦相手を指定します", モード="挑戦 or 再挑戦", 種目="挑戦する種目を記入")
 @app_commands.choices(モード=挑戦モード)
-async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discord.Member,
+async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: str,
               モード: app_commands.Choice[str], 種目: str):
     await interaction.response.defer(ephemeral=True)
     実行者 = interaction.user
@@ -283,11 +290,17 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
     mode_value = モード.value
     now = datetime.now()
 
+    # --- 対象メンバー取得 ---
+    try:
+        対象メンバー = await interaction.guild.fetch_member(int(対象ユーザー))
+    except:
+        await interaction.followup.send("指定されたユーザーが見つかりませんでした。", ephemeral=True)
+        return
+
     # --- モードと残高チェック ---
     cost = CHALLENGE_COSTS.get(mode_value)
     if money.get(user_id, 0) < cost:
-        await interaction.followup.send(f"残高が不足しています（必要：{cost}）",
-                                        ephemeral=True)
+        await interaction.followup.send(f"残高が不足しています（必要：{cost}）", ephemeral=True)
         return
 
     # --- ロール取得または作成 ---
@@ -298,7 +311,7 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
 
     # --- 再挑戦 → 挑戦者ロールがないなら拒否 ---
     if mode_value == "再挑戦" and role not in 実行者.roles:
-        await interaction.followup.send("再挑戦には「挑戦者」が必要です。", ephemeral=True)
+        await interaction.followup.send("再挑戦には「挑戦者」ロールが必要です。", ephemeral=True)
         return
 
     # --- 支払い処理 ---
@@ -313,26 +326,93 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: discor
     if role not in 実行者.roles:
         await 実行者.add_roles(role)
 
+    # --- 日付文字列を準備 ---
+    date_str = now.strftime("%Y年%m月%d日")
+
     # --- 支払いチャンネルにEmbed通知 ---
-    embed_all = discord.Embed(
-        description=(f"✉️ ⊰{対象ユーザー.mention} に挑戦状を送りました⊱\n"
-                     f"**種目**: {種目}"),
-        color=discord.Color.red(),
-        timestamp=now)
+    if mode_value == "再挑戦":
+        embed_all = discord.Embed(
+            description=(
+                f"### 🎟️⋆˙⟡{対象メンバー.mention} に**再挑戦**します.𖥔 ݁\n"
+                f"**種目: {種目}**\n"
+                f"発行日：{date_str}　📝：{実行者.mention}より"
+            ),
+            color=discord.Color.orange(),
+            timestamp=now
+        )
+    else:
+        embed_all = discord.Embed(
+            description=(
+                f"### 🎟️⋆˙⟡{対象メンバー.mention} に**挑戦状**を送りました.𖥔 ݁\n"
+                f"**種目: {種目}**\n"
+                f"発行日：{date_str}　⚜️：{実行者.mention}より"
+            ),
+            color=discord.Color.red(),
+            timestamp=now
+        )
     await interaction.channel.send(embed=embed_all)
 
-    # --- ゼネラル部屋にEmbed通知（2行構成） ---
-    embed_general = discord.Embed(
-        description=(f"✉️ ⊰{実行者.display_name} から挑戦状が届きました⊱\n"
-                     f"種目：{種目}"),
-        color=discord.Color.red(),
-        timestamp=now)
-    general_channel = bot.get_channel(CHALLENGE_CHANNEL_ID)
+    # --- ゼネラル部屋にEmbed通知 ---
+    if mode_value == "再挑戦":
+        embed_general = discord.Embed(
+            description=(
+                f"### 🎟️⋆˙⟡{実行者.display_name} が **再挑戦** を表明しました.𖥔 ݁\n"
+                f"**種目：{種目}**\n"
+                f"発行日：{date_str}　🤣：{実行者.mention}より"
+            ),
+            color=discord.Color.orange(),
+            timestamp=now
+        )
+    else:
+        embed_general = discord.Embed(
+            description=(
+                f"🎟️⋆˙⟡{実行者.display_name} から**挑戦状**が届きました.𖥔 ݁\n"
+                f"**種目：{種目}**\n"
+                f"発行日：{date_str}　⚜️：{実行者.mention}"
+            ),
+            color=discord.Color.red(),
+            timestamp=now
+        )
     if general_channel:
         await general_channel.send(embed=embed_general)
 
     # --- 実行者にだけ通知 ---
     await interaction.followup.send("支払い成功", ephemeral=True)
+
+
+
+
+# --- Autocomplete: Generalロール持ちメンバーをキャッシュして補完 ---
+@挑戦状.autocomplete("対象ユーザー")
+async def autocomplete_user(interaction: discord.Interaction, current: str):
+    global general_member_cache, cache_expire_time
+
+    now = datetime.utcnow()
+    general_role = discord.utils.get(interaction.guild.roles,
+                                     name=GENERAL_ROLE_NAME)
+    if not general_role:
+        return []
+
+    # --- キャッシュが有効な場合 ---
+    if general_member_cache and now < cache_expire_time:
+        candidates = general_member_cache
+    else:
+        # --- キャッシュ更新 ---
+        candidates = [
+            member for member in interaction.guild.members
+            if general_role in member.roles
+        ]
+        general_member_cache = candidates
+        cache_expire_time = now + timedelta(minutes=5)  # 5分間キャッシュ
+
+    # --- 検索フィルター ---
+    results = [
+        app_commands.Choice(name=member.display_name, value=str(member.id))
+        for member in candidates
+        if current.lower() in member.display_name.lower()
+    ]
+
+    return results[:25]  # Discordの上限
 
 
 # --- 月末に「挑戦者」ロールを全員から削除するタスク ---
