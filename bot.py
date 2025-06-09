@@ -370,7 +370,7 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: str,
     else:
         embed_general = discord.Embed(
             description=(
-                f"🎟️⋆˙⟡{実行者.display_name} から**挑戦状**が届きました.𖥔 ݁\n"
+                f"### 🎟️⋆˙⟡{実行者.display_name} から**挑戦状**が届きました.𖥔 ݁\n"
                 f"**種目：{種目}**\n"
                 f"発行日：{date_str}　⚜️：{実行者.mention}"
             ),
