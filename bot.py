@@ -328,6 +328,10 @@ async def 挑戦状(interaction: discord.Interaction, 対象ユーザー: str,
 
     # --- 日付文字列を準備 ---
     date_str = now.strftime("%Y年%m月%d日")
+    # --- ゼネラル部屋のチャンネルを取得（チャンネルIDを指定してください） ---
+    general_channel_id = 1373865991200833536  # ←実際の #ゼネラル部屋 のチャンネルIDに置き換えてください
+    general_channel = interaction.guild.get_channel(general_channel_id)
+
 
     # --- 支払いチャンネルにEmbed通知 ---
     if mode_value == "再挑戦":
