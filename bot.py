@@ -714,10 +714,14 @@ async def on_member_join(member: discord.Member):
 @bot.tree.command(name="lact残高", description="Dealerの所持金を確認します（管理者限定）")
 @app_commands.guilds(discord.Object(id=1351599305932275832))
 async def check_dealer_balance(interaction: discord.Interaction):
-    dealer_id = bot.user.id
-    amount = money.get(dealer_id, 0)
-    await interaction.response.send_message(f"Dealer残高は {amount} lacttip です。",
+    dealer_id = bot.user.id  # このBot自身のID
+    doc_ref = db.collection("user_balances").document(str(dealer_id))
+    doc = doc_ref.get()
+    amount = doc.to_dict().get("balance", 0) if doc.exists else 0
+
+    await interaction.response.send_message(f"Dealer残高は {amount} lactip です。",
                                             ephemeral=True)
+
 
 
 # --- 管理者: Dealerの残高を増やす ---
