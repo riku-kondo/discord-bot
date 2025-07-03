@@ -150,9 +150,15 @@ async def on_ready():
 async def money_check(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     user = interaction.user
-    amount = money.get(user.id, 0)
+
+    # Firestoreから直接取得
+    doc_ref = db.collection("user_balances").document(str(user.id))
+    doc = doc_ref.get()
+    amount = doc.to_dict().get("balance", 0) if doc.exists else 0
+
     await interaction.followup.send(
         f"{user.display_name} のスタックは {amount} lactip です。", ephemeral=True)
+
 
 
 # --- 他人に送金 ---
